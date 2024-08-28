@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "pyckbond"
+version = "0.1.0"
+description = "Generic Cli menu to pick and mount a Tool or Version in an Env using BindFS. (allows for generic names inside the env."
+authors = ["hoefkensj <hoefkens.j@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

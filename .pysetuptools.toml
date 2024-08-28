@@ -1,0 +1,23 @@
+[project]
+name = "Clict"
+description = "Python Dict with classlike access to its contents (dot.notation,creates missing keys on the fly,...)"
+version ='0.4.5'
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/hoefkensj/Clict"
+Issues = "https://github.com/hoefkensj/Clict/issues"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+

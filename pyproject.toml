@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "pyckbond"
+version = "0.1.0"
+description = "Generic Cli menu to pick and mount a Tool or Version in an Env using BindFS. (allows for generic names inside the env."
+authors = ["hoefkensj <hoefkens.j@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+[project]
+name = "Clict"
+description = "Python Dict with classlike access to its contents (dot.notation,creates missing keys on the fly,...)"
+version ='0.4.5'
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/hoefkensj/Clict"
+Issues = "https://github.com/hoefkensj/Clict/issues"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
