@@ -2,17 +2,17 @@
 import time
 from pathlib import Path
 from Clict import Clict
-import re
+import re,sys
 from contextlib import suppress
-from evhid import kbev
-from term import info
+from evhid import PosixKBev
+from term import info,Term
 from textwrap import shorten
 
 def negzero(x):
 	return (1-((x<0)-(x>0)*x))
 
 
-def Menu(root, lvl, X=None, Y=None):
+def Menu(T, root, lvl, x=None, y=None):
 
 	def Border(D,title):
 		def space(B):
@@ -73,6 +73,17 @@ def Menu(root, lvl, X=None, Y=None):
 			foot=foot.format(**BRD)
 			B.foot=foot
 			return B
+		def wipe(B):
+			w=' '*D.B.w
+			restore=''
+			restore+='\x1b[{Y};{X}H\x1b[0;2m │  {W}'.format(Y=D.Y,X=D.X-4,W=w)
+			y=int(D.Y)+1
+			for i in range(D.m.h+1):
+				restore+='\x1b[{Y};{X}H\x1b[0m{W}'.format(Y=y,X=D.X,W=w)
+				y+=1
+			restore+='###{YY}\x1b[{Y};{X}H\x1b[0m\n'.format(Y=y,X=1,YY=str(y).zfill(5))
+			B.wipe=restore
+			return B
 
 		B=Clict()
 		B.lvl=lvl or 0
@@ -80,7 +91,8 @@ def Menu(root, lvl, X=None, Y=None):
 		B=header(B)
 		B=body(B)
 		B=footer(B)
-		return ''.join([B.space,B.head,B.body,B.foot]).format(CT='\x1b[0;1m',CB='\x1b[0;2m')
+		B=wipe(B)
+		return '###'.join([''.join([B.space,B.head,B.body,B.foot]).format(CT='\x1b[0;1m',CB='\x1b[0;2m'),B.wipe])
 
 	def PItems(D,menu):
 		C=Clict()
@@ -95,6 +107,8 @@ def Menu(root, lvl, X=None, Y=None):
 			y = D.Y + 1+i
 			menuitem='{YX}{CNR}{CSEL}{NR}. {CIT}{CSEL}{ITEM}{SPC}{RET}{NOC}{ORG}'
 			name=shorten(item.name,D.m.w-D.n.w-2,placeholder='...')
+			if len(name)>=D.m.w-D.n.w-2:
+				name=f'{name[:-5]}...'
 
 
 			MNU[i].YX='\x1b[{Y};{X}H'.format(Y=y, X=D.X+2)
@@ -113,7 +127,7 @@ def Menu(root, lvl, X=None, Y=None):
 			MENU[i][0]= MNU[i].line.format(CSEL='',RET='')
 		return MENU
 
-	def Dimentions(*a, **k):
+	def Dimentions(T,*a, **k):
 
 		D = Clict()
 		d = Clict()
@@ -127,8 +141,8 @@ def Menu(root, lvl, X=None, Y=None):
 			lng_head = lng_title + 4  # 4:'-┐title
 			lng_menu = min(max(lng_head, lng_item), 30)
 			lng_bord = lng_menu + 2
-			D.Y = int(Y or 2)
-			D.X = int(X or 1)
+			D.Y = int(y or 2)
+			D.X = int(x or 1)
 			D.i.w = lng_item
 			D.n.w = lng_itemnr
 			D.t.w = lng_title
@@ -190,23 +204,33 @@ def Menu(root, lvl, X=None, Y=None):
 		pM.Current=0
 		print(''.join([pM.B,pM.I[pM.Current][1],*[pM.I[i+1][0] for i in range(len(pM.M)-1)]]),end='')
 
+	def reselect(M,loc):
+		return loc
+
 	root=Path(root).resolve().absolute()
 	# if not root.exists():
 		
-	T = info()
+	# T = info()
 	# print('\x1b[20;60H',T.get_cursor(),end='')
 
 	menu = [item for item in root.glob('*') if item.is_dir()]
-	D=Dimentions(root, menu)
+	D=Dimentions(T,root, menu)
 
 	pM=Clict()
 	pM.R=root
 	pM.T=T
-	pM.XY=pM.T.get_cursor()
+	pM.XY=pM.T.cursor.getxy()
 	pM.lvl=lvl
 	pM.M=menu
 	pM.D=D
-	pM.B=Border(D, root)
+	brdr,wipe,end=Border(D, root).split('###')
+	# pm.end.
+	pM.end.o=pM.end.get('b',int(y)+5)
+	pM.end.n=int(end[:5])
+	pM.end.b= pM.end.n if pM.end.n > pM.end.o else pM.end.o
+	pM.B=brdr
+	pM.W=wipe
+	pM.END=lambda :print(end[5:])
 	pM.I=PItems(D,menu)
 	pM.Selector=Selector(len(menu))
 	pM.Sl=lambda k : Moved(k)
@@ -214,6 +238,7 @@ def Menu(root, lvl, X=None, Y=None):
 	pM.pI=lambda i,s: pM.I[i][s]
 	pM.init=lambda :Init()
 	pM.change= Change
+	pM.reselect=reselect
 	return pM
 
 def main():
@@ -222,33 +247,57 @@ def main():
 
 	menus=[]
 	maxlvl=2
-	M=Menu('/Volumes/F2FSDATA/opt/cellar/lib/runners/', lvl)
+	T=Term()
+	loc=T.init
+	selectedloc=[]
+	M=Menu(T,'/Volumes/F2FSDATA/opt/cellar/lib/runners/', lvl,**loc)
 	# M.Sl(0)
 	M.init()
 
-	loc=M.T.get_cursor()
 
-	kb=kbev()
-	print('\x1b[?25l')
+	kb=Posix()
 	while True:
-		print('\x1b[20;60H\x1b[mcursor: \x1b[20;70HX:\x1b[32m{X}\x1b[m \x1b[20;75HY:\x1b[32m{Y}\x1b[m'.format(**loc))
+		# print('\x1b[20;60H\x1b[mcursor: \x1b[20;70HX:\x1b[32m{x}\x1b[m \x1b[20;75HY:\x1b[32m{y}\x1b[m'.format(**loc))
 		if kb.event():
-			key=kb.getkey()
+			key=kb.getKey()
+			print('')
 			if key in ['up','down']:
 				print(M.change(key),end='')
-				loc=M.T.get_cursor()
+				loc=M.T.cursor.getxy()
 				# print('\x1b7\x1b[20;60H{loc}\x1b8'.format(loc=loc))
-
-
 			elif key in ['right', 'enter']:
 				lvl+=1
 				menus+=[M]
-				print(M.change('read'))
-				M=Menu(M.M[M.Current],lvl,**loc)
+				print(M.change('read'),end='')
+				M=Menu(T,M.M[M.Current],lvl,**loc)
 				M.init()
-				loc=M.T.get_cursor()
+				loc=M.T.cursor.getxy()
+			elif key in ['left', 'esc']:
+				lvl=negzero(lvl-1)
+				print(M.W,end='')
+				M=menus[-1]
+				menus=menus[:-1]
+				print(M.change('read'),end='')
+				loc=M.T.cursor.getxy()
+			elif key == 'q':
+				M.END()
+				sys.exit()
 
-		time.sleep(0.01)
+		time.sleep(1e-6)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 			#
 			# elif key in ['esc','left']:
 			#
